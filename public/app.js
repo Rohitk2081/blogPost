@@ -5,9 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch and display posts
     const fetchPosts = async () => {
-        const response = await fetch('/api/posts');
-        const posts = await response.json();
-        displayPosts(posts);
+        try {
+            const response = await fetch('/api/posts');
+            const posts = await response.json();
+            displayPosts(posts);
+        } catch (error) {
+            console.error('Failed to fetch posts:', error.message);
+        }
     };
 
     // Display posts in the DOM
@@ -37,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // Add edit functionality to each post
         const editButtons = document.querySelectorAll('.edit-btn');
         editButtons.forEach(button => {
             button.addEventListener('click', (e) => {
@@ -53,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Create a new post
+    // Create or edit a post
     postForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const newPost = {
@@ -62,50 +67,61 @@ document.addEventListener('DOMContentLoaded', () => {
             author: document.getElementById('author').value
         };
 
-        if (editingPostId) {
-            // If editing, send a PUT request to update the post using the server-side route
-            try {
+        try {
+            if (editingPostId) {
+                // Update an existing post
                 const response = await fetch(`/api/posts/${editingPostId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(postData)
+                    body: JSON.stringify(newPost)
                 });
-    
+
                 if (!response.ok) {
                     const result = await response.json();
                     console.error('Error updating post:', result.message);
                     return;
                 }
-    
-                const updatedPost = await response.json();
-                console.log('Post updated successfully:', updatedPost);
-    
-            } catch (error) {
-                console.error('Failed to update post:', error.message);
-            }
-    
-            editingPostId = null; // Clear the editing state after saving
-        } else {
-        await fetch('/api/posts', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newPost)
-        });
-    }
 
-        postForm.reset(); // Clear form
-        fetchPosts(); // Refresh posts
+                console.log('Post updated successfully');
+                editingPostId = null; // Clear editing state
+            } else {
+                // Create a new post
+                await fetch('/api/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newPost)
+                });
+
+                console.log('Post created successfully');
+            }
+
+            postForm.reset(); // Clear form after submission
+            fetchPosts(); // Refresh posts list
+        } catch (error) {
+            console.error('Failed to submit post:', error.message);
+        }
     });
 
     // Delete a post
     const deletePost = async (id) => {
-        await fetch(`/api/posts/${id}`, {
-            method: 'DELETE'
-        });
+        try {
+            const response = await fetch(`/api/posts/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                console.error('Error deleting post:', result.message);
+            } else {
+                console.log('Post deleted successfully');
+            }
+        } catch (error) {
+            console.error('Failed to delete post:', error.message);
+        }
     };
 
     // Initial fetch to display posts
